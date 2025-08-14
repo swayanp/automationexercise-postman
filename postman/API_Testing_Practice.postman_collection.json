@@ -1,0 +1,120 @@
+{
+	"info": {
+		"_postman_id": "78327bea-8570-4154-ae57-075bdb1c6b8e",
+		"name": "API Testing Practice",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47577242",
+		"_collection_link": "https://swayanprakash-8d51f617-5812189.postman.co/workspace/Swayan-Pakash-Panda-(Chandan)'s~cc993eb5-8766-4b3a-8fb3-f15cec15eb9c/collection/47577242-78327bea-8570-4154-ae57-075bdb1c6b8e?action=share&source=collection_link&creator=47577242"
+	},
+	"item": [
+		{
+			"name": "POST Product",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let jsonData;\r",
+							"\r",
+							"// 1) Response is JSON\r",
+							"pm.test(\"Response is JSON\", function () {\r",
+							"  jsonData = pm.response.json();\r",
+							"  pm.expect(jsonData).to.be.an(\"object\");\r",
+							"});\r",
+							"\r",
+							"// 2) Status 200 or 201\r",
+							"pm.test(\"Status code is 200/201\", function () {\r",
+							"  pm.expect([200, 201]).to.include(pm.response.code);\r",
+							"});\r",
+							"\r",
+							"// 3) Has id\r",
+							"pm.test(\"Response contains product id\", function () {\r",
+							"  pm.expect(jsonData).to.have.property(\"id\");\r",
+							"});\r",
+							"\r",
+							"// 4) Title matches the value generated in pre-request script\r",
+							"pm.test(\"Title in response matches random_title\", function () {\r",
+							"  const expected = pm.environment.get(\"random_title\");\r",
+							"  pm.expect(jsonData).to.have.property(\"title\");\r",
+							"  pm.expect(jsonData.title).to.eql(expected);\r",
+							"});\r",
+							"\r",
+							"// 5) Save id for next request\r",
+							"pm.environment.set(\"product_id\", jsonData.id);\r",
+							"\r",
+							"// Optional: keep what the API returned for title (debug/verification)\r",
+							"pm.environment.set(\"created_title_from_post\", jsonData.title);\r",
+							"console.log(\"Saved product_id:\", jsonData.id, \"title:\", jsonData.title);\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Ensure base_url exists (helps catch env selection issues early)\r",
+							"pm.test(\"Environment has base_url\", function () {\r",
+							"  pm.expect(pm.environment.get(\"base_url\")).to.be.a(\"string\").and.not.empty;\r",
+							"});\r",
+							"\r",
+							"// Generate a reasonably unique random title and store in env\r",
+							"const suffix = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;\r",
+							"const title = `AutoProduct-${suffix}`;\r",
+							"pm.environment.set(\"random_title\", title);\r",
+							"\r",
+							"// Optional: log for visibility in Postman Console\r",
+							"console.log(\"random_title set to:\", title);\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"{{random_title}}\",\r\n  \"price\": 49.99,\r\n  \"description\": \"Auto-generated via pre-request script\",\r\n  \"image\": \"https://i.pravatar.cc\",\r\n  \"category\": \"electronics\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{base_url}}/products",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET Product by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/products/{{product_id}}",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"products",
+						"{{product_id}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
