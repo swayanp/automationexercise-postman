@@ -1,0 +1,106 @@
+{
+	"info": {
+		"_postman_id": "195c9db3-05a5-4307-ab4d-4c3e5a91a58a",
+		"name": "AutomationExercise API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47577242",
+		"_collection_link": "https://swayanprakash-8d51f617-5812189.postman.co/workspace/Swayan-Pakash-Panda-(Chandan)'s~cc993eb5-8766-4b3a-8fb3-f15cec15eb9c/collection/47577242-195c9db3-05a5-4307-ab4d-4c3e5a91a58a?action=share&source=collection_link&creator=47577242"
+	},
+	"item": [
+		{
+			"name": "GET Products List",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Add a run-specific ID to help identify this execution\r",
+							"if (!pm.environment.get('run_id')) {\r",
+							"    pm.environment.set('run_id', Date.now().toString());\r",
+							"}\r",
+							"\r",
+							"// Set a default response time limit if not defined in environment\r",
+							"if (!pm.environment.get('rt_limit_ms')) {\r",
+							"    pm.environment.set('rt_limit_ms', '3000'); // 3 seconds default\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// 0. Verify status code is 200\r",
+							"pm.test(\"Status code is 200\", () => {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"// 1. Read response time limit from environment\r",
+							"const limit = parseInt(pm.environment.get('rt_limit_ms') || '3000', 10);\r",
+							"\r",
+							"// 2. Response time check\r",
+							"pm.test(`Response time < ${limit} ms`, () => {\r",
+							"    pm.expect(pm.response.responseTime).to.be.below(limit);\r",
+							"});\r",
+							"\r",
+							"// 3. Flexible content-type check (API sometimes returns text/html instead of application/json)\r",
+							"const contentType = (pm.response.headers.get('Content-Type') || '').toLowerCase();\r",
+							"pm.test(\"Content-Type is JSON-compatible\", () => {\r",
+							"    pm.expect(/application\\/json|text\\/html/.test(contentType)).to.be.true;\r",
+							"});\r",
+							"\r",
+							"// 4. Validate body parses as JSON and has products array\r",
+							"let body, products;\r",
+							"pm.test(\"Body parses as JSON\", () => {\r",
+							"    body = pm.response.json();\r",
+							"    products = Array.isArray(body) ? body : body.products;\r",
+							"    pm.expect(products, \"products array\").to.be.an('array').that.is.not.empty;\r",
+							"});\r",
+							"\r",
+							"// 5. Minimal schema check (only if object root)\r",
+							"if (body && !Array.isArray(body)) {\r",
+							"    const schema = {\r",
+							"        type: \"object\",\r",
+							"        required: [\"products\"],\r",
+							"        properties: {\r",
+							"            products: { type: \"array\" }\r",
+							"        }\r",
+							"    };\r",
+							"    pm.test(\"Schema: object with products[]\", () => {\r",
+							"        pm.response.to.have.jsonSchema(schema);\r",
+							"    });\r",
+							"}\r",
+							"\r",
+							"// 6. Save first product ID to environment for chaining in later tests\r",
+							"const first = products && products[0];\r",
+							"if (first && (first.id || first._id)) {\r",
+							"    pm.environment.set(\"first_product_id\", first.id || first._id);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/api/productsList",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"productsList"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
