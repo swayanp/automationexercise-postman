@@ -1,3 +1,5 @@
+# Author: Swayan Prakash Panda
+
 # automationexercise-postman
 
 Postman + Newman project for testing https://automationexercise.com APIs.  
