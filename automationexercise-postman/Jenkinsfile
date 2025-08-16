@@ -3,6 +3,10 @@ pipeline {
 
   options { timestamps() }                 // prefix console logs with timestamps
 
+  triggers {
+    githubPush() // 👈 Add this line
+  }
+
   parameters {
     choice(                                // a dropdown you’ll see at “Build with Parameters”
       name: 'ENV',
