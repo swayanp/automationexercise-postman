@@ -4,7 +4,7 @@ pipeline {
   options { timestamps() }                 // prefix console logs with timestamps
 
   triggers {
-    githubPush()                          // 👈 Add this line
+    githubPush()                          // Add this line
   }
 
   parameters {
