@@ -1,0 +1,106 @@
+pipeline {
+  agent any                                // run on any available Jenkins agent
+
+  options { timestamps() }                 // prefix console logs with timestamps
+
+  triggers {
+    githubPush()                           // Added this line to enable automatic build trigger after any code change in github
+  }
+
+  parameters {
+    choice(                                // a dropdown you’ll see at “Build with Parameters”
+      name: 'ENV',
+      choices: ['dev', 'stage'],
+      description: 'Select Postman environment to run'
+    )
+    string(                                // optional: run only one folder (empty = run entire collection)
+      name: 'FOLDER',
+      defaultValue: '',
+      description: 'Postman folder name to run (leave empty to run all)'
+    )
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        // pulls your GitHub repo (change URL/branch if needed)
+        git branch: 'main', url: 'https://github.com/swayanp/automationexercise-postman.git'
+      }
+    }
+
+    stage('Install Node deps') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'node -v || true'
+            sh 'npm -v || true'
+            // install local devDependencies (uses package-lock if present)
+            sh 'npm ci || npm install'
+          } else {
+            bat 'node -v  || ver >NUL'
+            bat 'npm  -v  || ver >NUL'
+            bat 'npm install'
+          }
+        }
+      }
+    }
+
+    stage('Run Newman') {
+      steps {
+        script {
+          // Build the optional --folder argument from the parameter (only if provided)
+          def folderArgUnix = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
+          def folderArgWin  = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
+
+          if (isUnix()) {
+            sh """
+              mkdir -p reports/newman
+              npx newman run postman/AutomationExercise.postman_collection.json \\
+                -e postman/environments/automationexercise-${params.ENV}.postman_environment.json \\
+                ${folderArgUnix} \\
+                -r htmlextra,junit \\
+                --reporter-htmlextra-export reports/newman/newman.html \\
+                --reporter-junit-export    reports/newman/newman.xml \\
+                --reporter-htmlextra-skipSensitiveData
+            """
+          } else {
+            bat """
+              if not exist reports\\newman mkdir reports\\newman
+              npx newman run postman\\AutomationExercise.postman_collection.json ^
+                -e postman\\environments\\automationexercise-${params.ENV}.postman_environment.json ^
+                ${folderArgWin} ^
+                -r htmlextra,junit ^
+                --reporter-htmlextra-export reports\\newman\\newman.html ^
+                --reporter-junit-export    reports\\newman\\newman.xml ^
+                --reporter-htmlextra-skipSensitiveData
+            """
+          }
+        }
+      }
+      post {
+        always {
+          // Parse JUnit XML so Jenkins shows test counts and trends
+          junit 'reports/newman/newman.xml'
+
+          // Publish the htmlextra HTML on the build page
+          publishHTML(target: [
+            reportDir: 'reports/newman',
+            reportFiles: 'newman.html',
+            reportName: 'Newman HTML Report',
+            keepAll: true,
+            alwaysLinkToLastBuild: true,
+            allowMissing: false
+          ])
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // Save raw report files as artifacts so you can download them
+      archiveArtifacts artifacts: 'reports/newman/*', fingerprint: true
+    }
+  }
+}

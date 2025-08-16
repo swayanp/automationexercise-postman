@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python venv (if used later)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Generated reports & artifacts
+reports/newman/*
