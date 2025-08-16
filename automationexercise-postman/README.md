@@ -61,3 +61,4 @@ automationexercise-postman/
 │── Jenkinsfile
 
 # Test Webhook Trigger
+# Configured the Webhook in Github to trigger the build automatically when it detects any code changes in git hub
