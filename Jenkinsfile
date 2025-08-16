@@ -1,20 +1,12 @@
-// Jenkinsfile: CI pipeline for running Postman API tests using Newman with HTML & JUnit reports
+// Jenkinsfile: Runs Postman tests using Newman + HTML reports inside Jenkins with Docker agent
 
 pipeline {
-  // 👇 Use Docker image with Node.js pre-installed
-  agent {
-    docker {
-      image 'node:18'            // Node.js 18 comes with npm
-      args '-u root'             // Run as root to avoid permission issues inside container
-    }
-  }
+  agent any  // Use any available Jenkins agent (like your local Jenkins running in Docker)
 
-  // 👇 Global options
   options {
-    timestamps()                // Add timestamps to console output for debugging
+    timestamps()  // Add timestamps to console log
   }
 
-  // 👇 Define input parameters for flexibility
   parameters {
     choice(
       name: 'ENV',
@@ -29,26 +21,23 @@ pipeline {
   }
 
   stages {
-    stage('Install Dependencies') {
+    stage('Install Node.js & Newman') {
       steps {
-        echo '🔧 Installing project dependencies (Newman, htmlextra)...'
-        sh 'node -v'             // Print Node version
-        sh 'npm -v'              // Print npm version
-        sh 'npm install'         // Install dev dependencies listed in package.json
+        echo '🔧 Installing Node.js & Newman dependencies...'
+        sh 'node -v || true'
+        sh 'npm -v || true'
+        sh 'npm install -g newman newman-reporter-htmlextra || true'
       }
     }
 
-    stage('Run Newman Tests') {
+    stage('Run API Tests with Newman') {
       steps {
-        echo "🚀 Running Newman tests for ENV: ${params.ENV} FOLDER: ${params.FOLDER}"
         script {
-          // Prepare optional --folder argument
           def folderArg = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
 
-          // Execute Newman CLI command
           sh """
             mkdir -p reports/newman
-            npx newman run postman/AutomationExercise.postman_collection.json \\
+            newman run postman/AutomationExercise.postman_collection.json \\
               -e postman/environments/automationexercise-${params.ENV}.postman_environment.json \\
               ${folderArg} \\
               -r htmlextra,junit \\
@@ -63,15 +52,11 @@ pipeline {
 
   post {
     always {
-      echo '📦 Archiving test results...'
-
-      // 👇 Publish test summary in Jenkins UI
+      echo '📦 Archiving results and publishing report...'
       junit 'reports/newman/newman.xml'
 
-      // 👇 Store test artifacts (HTML report)
       archiveArtifacts artifacts: 'reports/newman/*', fingerprint: true
 
-      // 👇 Publish detailed HTML report with link in Jenkins
       publishHTML(target: [
         reportDir: 'reports/newman',
         reportFiles: 'newman.html',
