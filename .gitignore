@@ -20,4 +20,8 @@ __pycache__/
 *.pyc
 
 # Generated reports & artifacts
-reports/newman/*
+# Reports & logs
+newman/
+reports/
+*.html
+*.xml

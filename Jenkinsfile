@@ -1,19 +1,24 @@
 pipeline {
-  agent any                                // run on any available Jenkins agent
+  agent any  // Run on any available Jenkins agent
 
-  options { timestamps() }                 // prefix console logs with timestamps
+  options {
+    timestamps()  // Add timestamps to Jenkins console logs
+  }
 
   triggers {
-    githubPush()                           // Added this line to enable automatic build trigger after any code change in github
+    githubPush()  // Automatically trigger build on every GitHub push
   }
 
   parameters {
-    choice(                                // a dropdown you’ll see at “Build with Parameters”
+    // Dropdown for selecting Postman environment (e.g., dev or stage)
+    choice(
       name: 'ENV',
       choices: ['dev', 'stage'],
       description: 'Select Postman environment to run'
     )
-    string(                                // optional: run only one folder (empty = run entire collection)
+
+    // Optional string input to run only one specific folder in the collection
+    string(
       name: 'FOLDER',
       defaultValue: '',
       description: 'Postman folder name to run (leave empty to run all)'
@@ -24,7 +29,7 @@ pipeline {
 
     stage('Checkout') {
       steps {
-        // pulls your GitHub repo (change URL/branch if needed)
+        // Pull the GitHub repository (adjust URL/branch as needed)
         git branch: 'main', url: 'https://github.com/swayanp/automationexercise-postman.git'
       }
     }
@@ -32,15 +37,15 @@ pipeline {
     stage('Install Node deps') {
       steps {
         script {
+          // Install Node.js dependencies differently for Unix and Windows
           if (isUnix()) {
-            sh 'node -v || true'
-            sh 'npm -v || true'
-            // install local devDependencies (uses package-lock if present)
-            sh 'npm ci || npm install'
+            sh 'node -v || true'       // Check node version (skip error if not found)
+            sh 'npm -v || true'        // Check npm version
+            sh 'npm ci || npm install' // Prefer clean install (fall back if lock file missing)
           } else {
             bat 'node -v  || ver >NUL'
-            bat 'npm  -v  || ver >NUL'
-            bat 'npm install'
+            bat 'npm -v   || ver >NUL'
+            bat 'npm install'          // Use install for Windows
           }
         }
       }
@@ -49,27 +54,28 @@ pipeline {
     stage('Run Newman') {
       steps {
         script {
-          // Build the optional --folder argument from the parameter (only if provided)
-          def folderArgUnix = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
-          def folderArgWin  = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
+          // Create folder argument dynamically only if FOLDER is passed
+          def folderArg = params.FOLDER?.trim() ? "--folder \"${params.FOLDER}\"" : ""
 
           if (isUnix()) {
+            // Run Newman on Unix environment
             sh """
               mkdir -p reports/newman
               npx newman run postman/AutomationExercise.postman_collection.json \\
                 -e postman/environments/automationexercise-${params.ENV}.postman_environment.json \\
-                ${folderArgUnix} \\
+                ${folderArg} \\
                 -r htmlextra,junit \\
                 --reporter-htmlextra-export reports/newman/newman.html \\
                 --reporter-junit-export    reports/newman/newman.xml \\
                 --reporter-htmlextra-skipSensitiveData
             """
           } else {
+            // Run Newman on Windows environment
             bat """
               if not exist reports\\newman mkdir reports\\newman
               npx newman run postman\\AutomationExercise.postman_collection.json ^
                 -e postman\\environments\\automationexercise-${params.ENV}.postman_environment.json ^
-                ${folderArgWin} ^
+                ${folderArg} ^
                 -r htmlextra,junit ^
                 --reporter-htmlextra-export reports\\newman\\newman.html ^
                 --reporter-junit-export    reports\\newman\\newman.xml ^
@@ -78,12 +84,13 @@ pipeline {
           }
         }
       }
+
       post {
         always {
-          // Parse JUnit XML so Jenkins shows test counts and trends
+          // Parse and display test results (JUnit XML) in Jenkins UI
           junit 'reports/newman/newman.xml'
 
-          // Publish the htmlextra HTML on the build page
+          // Publish fancy HTML report (Newman htmlextra) inside Jenkins
           publishHTML(target: [
             reportDir: 'reports/newman',
             reportFiles: 'newman.html',
@@ -99,7 +106,7 @@ pipeline {
 
   post {
     always {
-      // Save raw report files as artifacts so you can download them
+      // Archive all generated Newman report files so you can download from Jenkins
       archiveArtifacts artifacts: 'reports/newman/*', fingerprint: true
     }
   }
