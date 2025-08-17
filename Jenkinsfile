@@ -3,6 +3,11 @@
 pipeline {
   agent any  // Use any available Jenkins agent (like your local Jenkins running in Docker)
 
+    // 1. Use Node.js tool installed via Jenkins Global Tool Config (Manage Jenkins > Global Tool Configuration)
+  tools {
+    nodejs 'Node24' // Make sure "Node24" exists and is correctly configured in Jenkins
+  }
+
   options {
     timestamps()  // Add timestamps to console log
   }
